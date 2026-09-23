@@ -26,9 +26,16 @@ LEADER_ID = "my_leader"
 # CAMERA CONFIG
 # ==========================================
 
+while True:
+    try:
+        camera_index = int(input("Enter camera index: "))
+        break
+    except ValueError:
+        print("Please enter a valid integer.")
+
 cameras = {
     "front": OpenCVCameraConfig(
-        index_or_path=0,
+        index_or_path=camera_index,
         width=640,
         height=480,
         fps=30,

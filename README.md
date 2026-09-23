@@ -1,87 +1,138 @@
-# lerobot-hackathon
+**Run these steps in order: setup → identify hardware → record → train.** Use the same physical arms, and keep the Terminal open.
 
-# Shape-Sorting VLA: Data Collection Guide
+1. **Extract the package and install the environment.** Conda must already be installed.
 
-**Goal:** Train the follower arm to place blocks into three boxes according to shape, regardless of size or color. The leader arm is used to demonstrate the task.
+```bash
+cd ~/Downloads
+tar -xzf so101_team_handoff_20260923.tar.gz
+cd so101_team_handoff_20260923
 
-## 1. What to prepare
+# Run this installation command only once:
+conda env create -n so101-handoff -f environment/environment.no-builds.yml
 
-- SO-101 leader and follower arms, firmly mounted.
-- Correct power supplies: **5V for the leader; 12V for the follower**, following their labels.
-- Both arm USB data cables connected to the recording computer.
-- UGREEN camera and wrist camera, connected to that same computer.
-- Three wide, low-sided boxes labeled **Cylinder**, **Triangle**, and **Rectangular Block**. Cubes and rectangular blocks share the third box.
-- Blocks in different sizes that the gripper can reliably hold.
-- A clear workspace with steady lighting.
-- A LeRobot recording setup that saves synchronized camera images, robot states, and action commands. **The camera snapshot scripts alone are insufficient.**
+conda activate so101-handoff
+bash restore_handoff.sh --apply
+```
 
-Keep box positions and camera mounting unchanged between recording and evaluation.
+2. **Get the Leader and Follower IDs from the calibration filenames.**
 
-## 2. Which camera to use
+```bash
+find calibration -name 'haoyu_so101_*.json'
+```
 
-**Record both cameras simultaneously.**
+The filename without `.json` is the ID. These are already known and must stay unchanged:
 
-| Camera | Placement | What must be visible |
-|---|---|---|
-| UGREEN — scene view | Fixed above and at an angle to the table | Entire pickup area, all three boxes, and the working gripper |
-| Wrist camera — close-up view | Mounted near the follower’s gripper | Gripper opening and the block during approach and grasping |
+- Leader ID: `haoyu_so101_leader`
+- Follower ID: `haoyu_so101_follower`
 
-Use consistent camera names, such as `scene` and `wrist`. Confirm the actual views before recording; USB camera indices can change after reconnection.
+3. **Find each arm’s USB port.**
 
-## 3. What action to record
+```bash
+lerobot-find-port
+```
 
-Start with **one block on the table per episode**.
+On the **first run**, unplug only the **Leader’s USB cable** when prompted, then press Enter. Copy the reported `/dev/tty.usbmodem...` path and reconnect it.
 
-1. Put the follower in a consistent starting position.
-2. Place a block in the pickup area, then remove your hands.
-3. Start recording.
-4. Use the leader arm to demonstrate:
-   - Approach the block.
-   - Grasp it.
-   - Lift it clear of the table.
-   - Move it over the correct box.
-   - Lower it and release it inside.
-   - Move the gripper away and return to the starting position.
-5. Stop recording before resetting the scene.
+Run the same command again for the **Follower**, unplugging only its USB cable when prompted. Copy its port and reconnect it. [Port discovery instructions](https://huggingface.co/docs/lerobot/so101)
 
-Use smooth, deliberate movements. Keep failed grasps, drops, wrong-box placements, and hand-assisted attempts separate from the initial successful-demonstration dataset.
+4. **Find the camera indices.**
 
-Use the same task instruction:
+```bash
+lerobot-find-cameras opencv
+open outputs/captured_images
+```
 
-> Sort the block by shape into the corresponding bin, regardless of its size or color.
+Match the captured images to the cameras:
 
-## 4. What variety to include
+- The view from the Follower’s wrist → `WRIST_INDEX`.
+- The external view → `EXTERNAL_INDEX`.
 
-**First record five trial episodes and inspect them.** Then aim for approximately 150–180 successful single-block demonstrations as an initial collection budget, not a guarantee of performance.
+Use the integer indices reported by the tool. **Do not assume they are still 0 and 1.** [Camera instructions](https://huggingface.co/docs/lerobot/cameras)
 
-Balance examples across:
+5. **Enter the four values you just found.**
 
-- All three shape categories.
-- Available sizes within each category.
-- Different pickup positions and orientations.
+Replace every `REPLACE_...` below, then paste the whole block:
 
-Avoid making color predict the destination. Ideally, include different colors of each shape and the same color across different shapes.
+```bash
+LEADER_PORT='REPLACE_LEADER_PORT'
+FOLLOWER_PORT='REPLACE_FOLLOWER_PORT'
+WRIST_INDEX='REPLACE_WITH_INTEGER'
+EXTERNAL_INDEX='REPLACE_WITH_INTEGER'
 
-Once single-block sorting works, add complete episodes containing **two or three blocks**, with varied arrangements and sorting orders.
+CAMERAS="{wrist: {type: opencv, index_or_path: $WRIST_INDEX, width: 640, height: 480, fps: 30}, external: {type: opencv, index_or_path: $EXTERNAL_INDEX, width: 640, height: 480, fps: 30}}"
 
-## 5. Conditions to meet
+ARM_ARGS=(
+  --robot.type=so101_follower
+  "--robot.port=$FOLLOWER_PORT"
+  --robot.id=haoyu_so101_follower
+  "--robot.cameras=$CAMERAS"
+  --teleop.type=so101_leader
+  "--teleop.port=$LEADER_PORT"
+  --teleop.id=haoyu_so101_leader
+  --display_data=true
+)
+```
 
-**Before collecting the full dataset:**
+6. **Briefly test the arms and cameras.**
 
-- Both camera recordings are clear and continuous.
-- Video, robot state, and action data are aligned in time.
-- Every block is graspable and every box is reachable.
-- Trial recordings contain the entire action, including release.
-- Scene resets are excluded from recordings.
+```bash
+lerobot-teleoperate "${ARM_ARGS[@]}" --fps=30
+```
 
-**A successful episode means:**
+Move the Leader gently and check that the Follower responds correctly. Check both camera views. Press **Ctrl+C** to finish the test.
 
-- The block ends fully inside the correct box.
-- No drop outside the box or human assistance occurs.
-- The gripper releases the block and withdraws successfully.
+7. **Create a new dataset ID and start recording.**
 
-**Before calling the system autonomous:**
+This generates a unique ID from the agreed base name and the current time. It saves the ID and folder path for the training step. **Recording stays local; no Hugging Face login is needed.**
 
-Test on new arrangements excluded from training. Record grasp success, correct-box placement, and complete-task success separately. A practical first milestone is **at least 18 successful attempts out of 20**, balanced across categories; this is a project target, not a safety certification.
+```bash
+DATASET_ID="Dan1el131/coffee-apple-grab_$(date +%Y%m%d_%H%M%S)"
+DATASET_ROOT="$PWD/recordings/$DATASET_ID"
 
-For multi-block operation, also verify that it sorts every block and stops when finished. Keep an operator nearby with an accessible stop control during evaluation.
+printf '%s\n' "$DATASET_ID" > latest_dataset_id.txt
+printf '%s\n' "$DATASET_ROOT" > latest_dataset_root.txt
+
+echo "Recording dataset: $DATASET_ID"
+
+lerobot-record "${ARM_ARGS[@]}" \
+  --dataset.repo_id="$DATASET_ID" \
+  --dataset.root="$DATASET_ROOT" \
+  --dataset.no_stamp=true \
+  --dataset.fps=30 \
+  --dataset.num_episodes=50 \
+  --dataset.episode_time_s=60 \
+  --dataset.reset_time_s=30 \
+  --dataset.single_task="Put the coffee sachet in the cup and put the apple on the plate" \
+  --dataset.streaming_encoding=true \
+  --dataset.encoder_threads=2 \
+  --dataset.push_to_hub=false
+```
+
+During recording: **`n` = next, `r` = rerecord, `q` = finish**. Wait until saving finishes and the Terminal prompt returns.
+
+8. **Train ACT on the dataset you just recorded.**
+
+The commands below read the saved dataset ID and path automatically:
+
+```bash
+DATASET_ID="$(cat latest_dataset_id.txt)"
+DATASET_ROOT="$(cat latest_dataset_root.txt)"
+
+echo "Training dataset: $DATASET_ID"
+
+lerobot-train \
+  --dataset.repo_id="$DATASET_ID" \
+  --dataset.root="$DATASET_ROOT" \
+  --dataset.video_backend=pyav \
+  --policy.type=act \
+  --policy.device=mps \
+  --policy.push_to_hub=false \
+  --output_dir="$PWD/outputs/act_$(date +%Y%m%d_%H%M%S)" \
+  --job_name=act_coffee_apple \
+  --batch_size=8 \
+  --num_workers=0 \
+  --steps=20000 \
+  --wandb.enable=false
+```
+
+On an **Intel Mac**, replace `mps` with `cpu`. Training checkpoints will be saved under `outputs/act_.../checkpoints/`.

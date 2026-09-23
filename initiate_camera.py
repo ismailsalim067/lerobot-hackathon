@@ -1,3 +1,4 @@
+import os
 import time
 
 from lerobot.robots.so_follower import (
@@ -13,8 +14,9 @@ from lerobot.teleoperators.so_leader import (
 from lerobot.cameras.opencv import OpenCVCameraConfig
 
 
-FOLLOWER_PORT = "COM5"
-LEADER_PORT = "COM6"
+# Override with e.g. `FOLLOWER_PORT=/dev/tty.usbmodemXXXX python initiate_camera.py`
+FOLLOWER_PORT = os.environ.get("FOLLOWER_PORT", "COM5")
+LEADER_PORT = os.environ.get("LEADER_PORT", "COM6")
 
 FOLLOWER_ID = "my_follower"
 LEADER_ID = "my_leader"
@@ -101,5 +103,7 @@ except KeyboardInterrupt:
 
 finally:
 
-    leader.disconnect()
-    follower.disconnect()
+    if leader.is_connected:
+        leader.disconnect()
+    if follower.is_connected:
+        follower.disconnect()

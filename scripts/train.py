@@ -1,6 +1,6 @@
 """
 Draft training script for the shape-sort task.
-Fill in DATASET_REPO_ID once Person 1 finishes recording and pushes the dataset.
+Fill in DATASET_REPO_ID once finished recording and dataset is pushed.
 """
 
 import subprocess

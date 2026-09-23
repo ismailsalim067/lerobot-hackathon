@@ -1,0 +1,105 @@
+import time
+
+from lerobot.robots.so_follower import (
+    SO101Follower,
+    SO101FollowerConfig,
+)
+
+from lerobot.teleoperators.so_leader import (
+    SO101Leader,
+    SO101LeaderConfig,
+)
+
+from lerobot.cameras.opencv import OpenCVCameraConfig
+
+
+FOLLOWER_PORT = "COM5"
+LEADER_PORT = "COM6"
+
+FOLLOWER_ID = "my_follower"
+LEADER_ID = "my_leader"
+
+
+# ==========================================
+# CAMERA CONFIG
+# ==========================================
+
+cameras = {
+    "front": OpenCVCameraConfig(
+        index_or_path=0,
+        width=640,
+        height=480,
+        fps=30,
+    )
+}
+
+
+# ==========================================
+# FOLLOWER
+# ==========================================
+
+follower_config = SO101FollowerConfig(
+    port=FOLLOWER_PORT,
+    id=FOLLOWER_ID,
+    cameras=cameras,
+)
+
+follower = SO101Follower(follower_config)
+
+
+# ==========================================
+# LEADER
+# ==========================================
+
+leader_config = SO101LeaderConfig(
+    port=LEADER_PORT,
+    id=LEADER_ID,
+)
+
+leader = SO101Leader(leader_config)
+
+
+# ==========================================
+# CONNECT
+# ==========================================
+
+print("Connecting follower + camera...")
+follower.connect()
+
+print("Connecting leader...")
+leader.connect()
+
+print("System ready")
+
+
+# ==========================================
+# CONTROL LOOP
+# ==========================================
+
+try:
+
+    while True:
+
+        # Leader position
+        action = leader.get_action()
+
+        # Move follower
+        follower.send_action(action)
+
+        # Get follower observation
+        # This includes camera images
+        observation = follower.get_observation()
+
+        print(observation.keys())
+
+        time.sleep(0.01)
+
+
+except KeyboardInterrupt:
+    print("Stopping...")
+
+
+finally:
+
+    leader.disconnect()
+    follower.disconnect()

@@ -1,139 +1,87 @@
 # lerobot-hackathon
 
-# Windows Camera & Calibration File Toolkit
+# Shape-Sorting VLA: Data Collection Guide
 
-English setup and diagnostics for a Windows teammate working with SO-101 cameras.
+**Goal:** Train the follower arm to place blocks into three boxes according to shape, regardless of size or color. The leader arm is used to demonstrate the task.
 
-**Included:** a private Python environment, USB camera detection, multi-camera preview,
-snapshots, camera labels, Windows COM-port inventory, and offline calibration JSON
-validation/backup.
+## 1. What to prepare
 
-**Calibration scope:** this toolkit checks and backs up existing calibration files.
-It does **not** perform physical arm calibration, apply calibration to motors, enable
-torque, run teleoperation, or run a robot policy. Physical calibration and first-motion
-checks belong to the on-site manufacturer's workflow. See [calibration handoff](docs/calibration.md).
+- SO-101 leader and follower arms, firmly mounted.
+- Correct power supplies: **5V for the leader; 12V for the follower**, following their labels.
+- Both arm USB data cables connected to the recording computer.
+- UGREEN camera and wrist camera, connected to that same computer.
+- Three wide, low-sided boxes labeled **Cylinder**, **Triangle**, and **Rectangular Block**. Cubes and rectangular blocks share the third box.
+- Blocks in different sizes that the gripper can reliably hold.
+- A clear workspace with steady lighting.
+- A LeRobot recording setup that saves synchronized camera images, robot states, and action commands. **The camera snapshot scripts alone are insufficient.**
 
-## Start here on Windows
+Keep box positions and camera mounting unchanged between recording and evaluation.
 
-1. Download this repository as a ZIP and **extract it** into a normal local folder,
-   for example `C:\Users\YourName\Projects\camera-kit`. Do not run it inside the ZIP.
-2. Double-click **`01_setup.cmd`**. It looks for 64-bit Python 3.12. If missing,
-   it offers to install Python for the current user using Windows Package Manager.
-   You can instead install Python 3.12 yourself from [python.org](https://www.python.org/downloads/windows/).
-3. Setup creates `.venv` in this folder and installs the pinned packages in
-   `requirements.txt`. Internet access is required for setup. It does not change an
-   existing Conda environment, install GPU packages, or install LeRobot.
-4. Connect the USB camera(s), then double-click **`02_camera_tools.cmd`**.
-5. Choose **3: Detect cameras**, then **4: Preview**. Enter only the indices you
-   want to open. Confirm each camera by its picture; do not assume index 0 is the
-   external camera. The laptop's built-in webcam may also be listed.
-6. In the preview window, press **S** to save pictures or **Q / Esc** to close.
-   For two cameras, enter two indices separated by a space. This opens both at once
-   so you can check whether the USB hub can sustain both streams.
-7. After identifying a view, use **6: Save a camera label**, such as `scene` or
-   `wrist`. Detect and identify again after changing USB connections or backend.
-8. For an existing calibration JSON, double-click **`03_check_calibration.cmd`**.
+## 2. Which camera to use
 
-Allow camera access for the application when Windows asks. Under Windows 11, check
-**Settings > Privacy & security > Camera > Camera access** and
-**Let desktop apps access your camera** if access is blocked. See
-[Microsoft's camera-permission guide](https://support.microsoft.com/en-us/windows/manage-app-permissions-for-your-camera-in-windows-87ebc757-1f87-7bbf-84b5-0686afb6ca6b).
+**Record both cameras simultaneously.**
 
-## What gets connected
+| Camera | Placement | What must be visible |
+|---|---|---|
+| UGREEN — scene view | Fixed above and at an angle to the table | Entire pickup area, all three boxes, and the working gripper |
+| Wrist camera — close-up view | Mounted near the follower’s gripper | Gripper opening and the block during approach and grasping |
 
-Each USB camera connects to the same Windows laptop, directly or through a data-capable
-USB hub. A UGREEN webcam uses its own matching cable. The USB-A-to-small-white-connector
-cable from the SO-101 kit is for a matching camera module; do not assume it fits the
-UGREEN webcam. Camera power normally comes from USB. Do not connect a camera to the
-arm's DC motor-power input.
+Use consistent camera names, such as `scene` and `wrist`. Confirm the actual views before recording; USB camera indices can change after reconnection.
 
-This toolkit's camera functions do not need either arm's motor controller connected.
-The COM-port menu only reads the operating system's device list; it does not open a
-serial port or verify motor communication.
+## 3. What action to record
 
-## Menu
+Start with **one block on the table per episode**.
 
-| Item | Function |
-|---|---|
-| 1 | Check Python, OpenCV, NumPy and pyserial |
-| 2 | List COM ports from OS metadata only |
-| 3 | Probe indices 0 through 9; confirm a usable video frame |
-| 4 | Preview one to four selected cameras; S saves frames |
-| 5 | Save a snapshot from each selected camera |
-| 6 | Give an identified camera a local label |
-| 7 | Validate and optionally back up an existing calibration JSON |
-| 8 | Export a local diagnostic report |
-| 9 | Switch video backend; clears stale camera labels |
+1. Put the follower in a consistent starting position.
+2. Place a block in the pickup area, then remove your hands.
+3. Start recording.
+4. Use the leader arm to demonstrate:
+   - Approach the block.
+   - Grasp it.
+   - Lift it clear of the table.
+   - Move it over the correct box.
+   - Lower it and release it inside.
+   - Move the gripper away and return to the starting position.
+5. Stop recording before resetting the scene.
 
-**Detection briefly opens the cameras being tested, including a built-in webcam.**
-Detection does not save images. Snapshots are saved only when explicitly requested.
-The toolkit does not capture audio, upload files, or contact a server after setup.
+Use smooth, deliberate movements. Keep failed grasps, drops, wrong-box placements, and hand-assisted attempts separate from the initial successful-demonstration dataset.
 
-## Files on the Windows laptop
+Use the same task instruction:
 
-| Path | Contents |
-|---|---|
-| `.venv/` | This toolkit's Python environment |
-| `local/setup.log` | Latest installation output |
-| `local/camera_detection.json` | Detection results and backend used |
-| `local/cameras.json` | User-assigned camera labels and requested capture settings |
-| `local/snapshots/` | JPEG snapshots with unique filenames |
-| `local/calibration_backups/` | Unmodified calibration files and validation reports |
-| `local/diagnostics_*.json` | Diagnostic reports you can review and share |
+> Sort the block by shape into the corresponding bin, regardless of its size or color.
 
-`.venv/` and all of `local/` are ignored by Git. **Do not force-add them.**
-No real calibration files, photographs, Mac paths, or machine-specific COM ports are
-included in the distributed toolkit. A calibration backup is not installed into
-LeRobot's calibration directory and is not applied to hardware.
+## 4. What variety to include
 
-## Camera debugging
+**First record five trial episodes and inspect them.** Then aim for approximately 150–180 successful single-block demonstrations as an initial collection budget, not a guarantee of performance.
 
-Start with 640x480 at 30 requested FPS. Cameras may negotiate another resolution or
-frame rate; detection reports the returned frame size. Reported camera FPS can be
-inaccurate, and the preview's display FPS is not a synchronization guarantee.
+Balance examples across:
 
-If detection finds nothing:
+- All three shape categories.
+- Available sizes within each category.
+- Different pickup positions and orientations.
 
-- Close other camera users, such as Teams, Zoom, OBS or the Windows Camera app.
-- Check camera privacy permissions and the lens shutter/protective film.
-- Try the camera directly in the laptop, or another data-capable USB port/cable.
-- Try menu 9 to switch from `dshow` to `msmf`, then detect again.
-- If the device might be above index 9, use the advanced detection command below.
+Avoid making color predict the destination. Ideally, include different colors of each shape and the same color across different shapes.
 
-If each camera works alone but not together, test a lower requested resolution/frame
-rate and a different USB connection. Separate snapshot files are taken sequentially;
-they are **not** a synchronized robot-training dataset.
+Once single-block sorting works, add complete episodes containing **two or three blocks**, with varied arrangements and sorting orders.
 
-If OpenCV reports `DLL load failed`, consult the [OpenCV package troubleshooting notes](https://pypi.org/project/opencv-python/4.12.0.88/).
-Windows N/KN may need the Media Feature Pack; the Visual C++ runtime may also be required.
-If no preview window can be created, make sure this environment has `opencv-python`,
-not a conflicting `opencv-python-headless` or `opencv-contrib-python` installation.
+## 5. Conditions to meet
 
-If a driver freezes during detection, the probe is stopped after 15 seconds and the
-tool moves on. If a preview freezes, return to its terminal and press **Ctrl+C**.
+**Before collecting the full dataset:**
 
-## Advanced camera-only commands
+- Both camera recordings are clear and continuous.
+- Video, robot state, and action data are aligned in time.
+- Every block is graspable and every box is reachable.
+- Trial recordings contain the entire action, including release.
+- Scene resets are excluded from recordings.
 
-Run these from PowerShell in the extracted toolkit folder. The example indices are
-placeholders: replace them with indices you have identified on this Windows laptop.
+**A successful episode means:**
 
-```powershell
-.\.venv\Scripts\python.exe kit.py doctor
-.\.venv\Scripts\python.exe kit.py ports
-.\.venv\Scripts\python.exe kit.py detect --max-index 15 --backend dshow
-.\.venv\Scripts\python.exe kit.py preview --indices 1 2 --backend dshow
-.\.venv\Scripts\python.exe kit.py preview --indices 1 --width 1280 --height 720 --fps 15
-.\.venv\Scripts\python.exe kit.py snapshot --indices 1 2
-.\.venv\Scripts\python.exe kit.py report
-```
+- The block ends fully inside the correct box.
+- No drop outside the box or human assistance occurs.
+- The gripper releases the block and withdraws successfully.
 
-The teammate's familiar script names are also available:
+**Before calling the system autonomous:**
 
-```powershell
-.\.venv\Scripts\python.exe detect_cameras.py
-.\.venv\Scripts\python.exe snapshot_cameras.py 1 2
-```
+Test on new arrangements excluded from training. Record grasp success, correct-box placement, and complete-task success separately. A practical first milestone is **at least 18 successful attempts out of 20**, balanced across categories; this is a project target, not a safety certification.
 
-These are expanded replacements for the supplied short scripts. Detection now checks
-for real frames and isolates potentially hanging drivers. Snapshot indices must be
-chosen explicitly instead of assuming that 0 and 1 are the desired cameras.
+For multi-block operation, also verify that it sorts every block and stops when finished. Keep an operator nearby with an accessible stop control during evaluation.

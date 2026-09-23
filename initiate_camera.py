@@ -15,8 +15,8 @@ from lerobot.cameras.opencv import OpenCVCameraConfig
 
 
 # Override with e.g. `FOLLOWER_PORT=/dev/tty.usbmodemXXXX python initiate_camera.py`
-FOLLOWER_PORT = os.environ.get("FOLLOWER_PORT", "COM5")
-LEADER_PORT = os.environ.get("LEADER_PORT", "COM6")
+FOLLOWER_PORT = os.environ.get("FOLLOWER_PORT", "/dev/tty.usbmodem_follower")
+LEADER_PORT = os.environ.get("LEADER_PORT", "/dev/tty.usbmodem_leader")
 
 FOLLOWER_ID = "my_follower"
 LEADER_ID = "my_leader"

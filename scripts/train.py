@@ -19,7 +19,7 @@ cmd = [
     f"--policy.type={POLICY_TYPE}",
     f"--output_dir={OUTPUT_DIR}",
     f"--job_name={JOB_NAME}",
-    "--policy.device=cuda",
+    "--policy.device=mps",
     "--wandb.enable=false",
 ]
 
